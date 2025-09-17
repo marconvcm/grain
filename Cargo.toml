@@ -1,0 +1,18 @@
+[package]
+name = "grain"
+version = "0.1.0"
+edition = "2021"
+description = "Godot Rust Addons Installation Ninja - A CLI tool for managing Rust addons in Godot"
+authors = ["Marcos Vinicius Marcon"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/marconvcm/grain"
+keywords = ["godot", "rust", "addon", "cli", "game-development"]
+categories = ["command-line-utilities", "game-development"]
+
+[[bin]]
+name = "grain"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
