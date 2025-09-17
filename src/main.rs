@@ -1,5 +1,13 @@
 use clap::{Parser, Subcommand};
 
+mod bag;
+mod provider;
+mod ui;
+mod fs_utils;
+mod commands;
+mod installer;
+mod error;
+
 #[derive(Parser)]
 #[command(name = "grain")]
 #[command(about = "Godot Rust Addons Installation Ninja")]
@@ -14,12 +22,14 @@ struct Cli {
 enum Commands {
     /// Initialize a new Godot Rust addon project
     Init {
-        /// Name of the addon
-        #[arg(short, long)]
-        name: String,
         /// Target directory (defaults to current directory)
         #[arg(short, long)]
         path: Option<String>,
+    },
+    /// Search query
+    Search {
+        #[arg()]
+        term: String,
     },
     /// Install a Rust addon from a repository
     Install {
@@ -29,6 +39,10 @@ enum Commands {
         /// Specific version to install
         #[arg(short, long)]
         version: Option<String>,
+    },
+    /// Restore all addons from bag.yaml
+    Restore {
+
     },
     /// List installed addons
     List {
@@ -56,55 +70,38 @@ enum Commands {
     },
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let cli = Cli::parse();
 
-    match cli.command {
-        Commands::Init { name, path } => {
-            let target_path = path.unwrap_or_else(|| ".".to_string());
-            println!(
-                "Initializing new Godot Rust addon '{}' in '{}'",
-                name, target_path
-            );
-            println!("This would create the basic structure for a Godot Rust addon.");
-            // TODO: Implement addon initialization logic
+    let result = match cli.command {
+        Commands::Init { path } => {
+            commands::handle_init(path).await
         }
         Commands::Install { addon, version } => {
-            match version {
-                Some(v) => println!("Installing addon '{}' version '{}'", addon, v),
-                None => println!("Installing latest version of addon '{}'", addon),
-            }
-            println!("This would download and install the specified addon.");
-            // TODO: Implement addon installation logic
+            commands::handle_install(addon, version).await
+        }
+        Commands::Search { term } => {
+            commands::handle_search(term).await
+        }
+        Commands::Restore { } => {
+            commands::handle_restore().await
         }
         Commands::List { verbose } => {
-            println!("Listing installed addons:");
-            if verbose {
-                println!("Verbose mode - showing detailed information");
-            }
-            println!("No addons currently installed.");
-            // TODO: Implement addon listing logic
+            commands::handle_list(verbose).await
         }
         Commands::Remove { name, force } => {
-            if force {
-                println!("Force removing addon '{}'", name);
-            } else {
-                println!("Removing addon '{}' (with confirmation)", name);
-            }
-            println!("This would remove the specified addon.");
-            // TODO: Implement addon removal logic
+            commands::handle_remove(name, force).await
         }
         Commands::Update { all, addon } => {
-            if all {
-                println!("Updating all installed addons");
-            } else if let Some(addon_name) = addon {
-                println!("Updating addon '{}'", addon_name);
-            } else {
-                println!("Please specify either --all or an addon name to update");
-                std::process::exit(1);
-            }
-            println!("This would update the specified addon(s).");
-            // TODO: Implement addon update logic
+            commands::handle_update(all, addon).await
         }
+    };
+
+    if let Err(e) = result {
+        eprintln!("❌ Error: {}", e);
+        std::process::exit(1);
     }
 }
+
+
